@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hilt-sdk"
+version = "1.0.0"
+description = "Official Python SDK for Hilt's supported merchant contract."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Hilt", email = "support@hilt.so" }
+]
+license = "LicenseRef-Hilt-Proprietary"
+license-files = ["LICENSE"]
+keywords = ["hilt", "solana", "payments", "checkout", "sdk"]
+dependencies = [
+  "requests>=2.31.0",
+]
+urls = { Homepage = "https://www.hilt.so", Documentation = "https://docs.hilt.so/developers/sdks", Repository = "https://github.com/Hiltpay/hilt-sdk-python", Issues = "https://github.com/Hiltpay/hilt-sdk-python/issues" }
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["hilt_sdk*"]
+
+[tool.setuptools.package-data]
+hilt_sdk = ["py.typed"]
