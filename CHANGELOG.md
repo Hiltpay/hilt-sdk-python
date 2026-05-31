@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Align agent bootstrap examples with the flat `setup_intent_id` response field
+- Keep nested `setup_intent.id` compatibility for existing integrations
+
 ## 1.0.1
 
 - Add Hilt Pay API agent bootstrap, setup manifest, billing checkout, and entitlement helpers

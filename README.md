@@ -44,7 +44,7 @@ setup = public_client.pay_api.agent_bootstrap(
 )
 
 public_client.pay_api.submit_agent_setup_manifest(
-    setup["setup_intent"]["id"],
+    setup["setup_intent_id"],
     {
         "setup_token": setup["setup_token"],
         "manifest": {
