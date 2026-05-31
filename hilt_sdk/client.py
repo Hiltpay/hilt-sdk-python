@@ -211,6 +211,138 @@ class SupportResource(_ResourceBase):
         return self._client.request(f"/v1/support/tickets/{ticket_id}/message", method="POST", body=body)
 
 
+class AccessResource(_ResourceBase):
+    @staticmethod
+    def _idempotency_headers(idempotency_key: str) -> dict[str, str]:
+        normalized = str(idempotency_key or "").strip()
+        if not normalized:
+            raise ValueError("Hilt Pay API write calls require an idempotency key.")
+        return {"Idempotency-Key": normalized}
+
+    def list_rails(self) -> JSONDict:
+        return self._client.request("/v1/access/rails")
+
+    def agent_bootstrap(self, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            "/v1/access/agent-bootstrap",
+            method="POST",
+            body=body,
+            auth="none",
+        )
+
+    def get_agent_setup_status(self, setup_intent_id: str, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/agent-bootstrap/{setup_intent_id}/status",
+            method="POST",
+            body=body,
+            auth="none",
+        )
+
+    def submit_agent_setup_manifest(self, setup_intent_id: str, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/agent-bootstrap/{setup_intent_id}/manifest",
+            method="POST",
+            body=body,
+            auth="none",
+        )
+
+    def approve_agent_setup(self, setup_intent_id: str, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/agent-bootstrap/{setup_intent_id}/approve",
+            method="POST",
+            body=body,
+            auth="bearer",
+        )
+
+    def list_rail_settings(self) -> JSONDict:
+        return self._client.request("/v1/access/rail-settings")
+
+    def update_rail_setting(
+        self,
+        rail_id: str,
+        body: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+    ) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/rail-settings/{rail_id}",
+            method="PUT",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def get_setup_readiness(self, query: Optional[Mapping[str, Any]] = None) -> JSONDict:
+        return self._client.request("/v1/access/setup/readiness", query=query)
+
+    def get_product_available_rails(self, query: Optional[Mapping[str, Any]] = None) -> JSONDict:
+        return self._client.request("/v1/access/products/available-rails", query=query)
+
+    def get_product_available_rails_by_id(
+        self,
+        product_id: str,
+        query: Optional[Mapping[str, Any]] = None,
+    ) -> JSONDict:
+        return self._client.request(f"/v1/access/products/{product_id}/available-rails", query=query)
+
+    def create_app(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/apps",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def create_product(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/products",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def create_payment_session(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/payment-sessions",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def submit_payment_proof(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/payment-proofs",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def check_entitlement(self, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            "/v1/access/entitlements/check",
+            method="POST",
+            body=body,
+        )
+
+    def get_entitlement(self, entitlement_id: str) -> JSONDict:
+        return self._client.request(f"/v1/access/entitlements/{entitlement_id}")
+
+    def create_webhook(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/webhooks",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def create_stripe_billing_checkout(self, body: Mapping[str, Any]) -> JSONDict:
+        return self._client.request(
+            "/v1/access/billing/checkout/stripe",
+            method="POST",
+            body=body,
+            auth="bearer",
+        )
+
+
 class WebhooksResource(_ResourceBase):
     def list_endpoints(self) -> JSONDict:
         return self._client.request("/v1/webhooks/endpoints", auth="bearer")
@@ -262,7 +394,7 @@ class HiltClient:
         bearer_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 20.0,
-        user_agent: str = "hilt-python-sdk/1.0.0",
+        user_agent: str = "hilt-python-sdk/1.0.1",
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key.strip() if api_key else None
@@ -278,6 +410,8 @@ class HiltClient:
         self.memberships = MembershipsResource(self)
         self.receipts = ReceiptsResource(self)
         self.support = SupportResource(self)
+        self.access = AccessResource(self)
+        self.pay_api = self.access
         self.webhooks = WebhooksResource(self)
 
     def request(

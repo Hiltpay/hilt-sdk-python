@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hilt-sdk"
-version = "1.0.0"
-description = "Official Python SDK for Hilt's supported merchant contract."
+version = "1.0.1"
+description = "Official Python SDK for Hilt Pay Workspace and Hilt Pay API."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -13,7 +13,7 @@ authors = [
 ]
 license = "LicenseRef-Hilt-Proprietary"
 license-files = ["LICENSE"]
-keywords = ["hilt", "solana", "payments", "checkout", "sdk"]
+keywords = ["hilt", "solana", "x402", "agent", "entitlements", "payments", "checkout", "sdk"]
 dependencies = [
   "requests>=2.31.0",
 ]

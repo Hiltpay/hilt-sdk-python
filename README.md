@@ -1,6 +1,6 @@
 # `hilt-sdk`
 
-Official Python SDK for Hilt's supported merchant contract.
+Official Python SDK for Hilt Pay Workspace and Hilt Pay API.
 
 Source: `https://github.com/Hiltpay/hilt-sdk-python`
 
@@ -13,6 +13,7 @@ This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 - receipts
 - support
 - webhooks
+- Hilt Pay API apps, products, entitlements, setup manifests, and agent bootstrap
 
 ## Install
 
@@ -20,27 +21,49 @@ This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 pip install hilt-sdk
 ```
 
-If you want a direct wheel instead of PyPI:
-
-```bash
-pip install https://www.hilt.so/downloads/hilt_sdk-1.0.0-py3-none-any.whl
-```
-
-Or install the direct source distribution:
-
-```bash
-pip install https://www.hilt.so/downloads/hilt-sdk-1.0.0.tar.gz
-```
-
-### Verify a direct-bundle checksum
-
-```bash
-curl -O https://www.hilt.so/downloads/hilt_sdk-1.0.0-py3-none-any.whl
-curl -O https://www.hilt.so/downloads/hilt_sdk-1.0.0-py3-none-any.whl.sha256
-sha256sum -c hilt_sdk-1.0.0-py3-none-any.whl.sha256
-```
+Source and release history: `https://github.com/Hiltpay/hilt-sdk-python`
 
 ## Example
+
+### Agent-first Hilt Pay API bootstrap
+
+Public launch settlement is Solana USDC. The `payment_protocol: "x402"` field describes the protected-resource HTTP 402 flow.
+
+```python
+from hilt_sdk import HiltClient
+
+public_client = HiltClient()
+
+setup = public_client.pay_api.agent_bootstrap(
+    {
+        "agent_name": "Acme API Builder",
+        "agent_platform": "cursor",
+        "requested_use_case": "Protect /ai/pro with Hilt Pay API",
+        "requested_permissions": ["access:read", "access:write", "access:webhooks"],
+    }
+)
+
+public_client.pay_api.submit_agent_setup_manifest(
+    setup["setup_intent"]["id"],
+    {
+        "setup_token": setup["setup_token"],
+        "manifest": {
+            "app": {"name": "Acme AI"},
+            "product": {
+                "external_product_id": "pro-api",
+                "title": "Pro API access",
+                "amount_minor_units": 79000000,
+                "default_rail": "solana_usdc",
+            },
+            "payment_protocol": "x402",
+            "settlement_rail": "solana_usdc",
+            "protected_resource": {"url": "https://api.acme.test/ai/pro"},
+        },
+    },
+)
+```
+
+### Merchant workspace product
 
 ```python
 from hilt_sdk import HiltClient
