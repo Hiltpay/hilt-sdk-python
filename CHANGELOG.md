@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Update Hilt Pay API agent bootstrap examples with owner approval and plan recommendation fields
+
 ## 1.0.2
 
 - Align agent bootstrap examples with the flat `setup_intent_id` response field

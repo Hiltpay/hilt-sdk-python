@@ -39,11 +39,12 @@ setup = public_client.pay_api.agent_bootstrap(
         "agent_name": "Acme API Builder",
         "agent_platform": "cursor",
         "requested_use_case": "Protect /ai/pro with Hilt Pay API",
+        "contact_email": "founder@acme.test",
         "requested_permissions": ["access:read", "access:write", "access:webhooks"],
     }
 )
 
-public_client.pay_api.submit_agent_setup_manifest(
+manifest = public_client.pay_api.submit_agent_setup_manifest(
     setup["setup_intent_id"],
     {
         "setup_token": setup["setup_token"],
@@ -54,13 +55,26 @@ public_client.pay_api.submit_agent_setup_manifest(
                 "title": "Pro API access",
                 "amount_minor_units": 79000000,
                 "default_rail": "solana_usdc",
+                "expected_monthly_payments": 120,
+                "expected_monthly_volume_usd": 9480,
             },
             "payment_protocol": "x402",
             "settlement_rail": "solana_usdc",
-            "protected_resource": {"url": "https://api.acme.test/ai/pro"},
+            "protected_resource": {
+                "url": "https://api.acme.test/ai/pro",
+                "method": "POST",
+                "customer_identity": "external_customer_id",
+            },
+            "webhook": {
+                "url": "https://api.acme.test/webhooks/hilt",
+                "subscribed_events": ["access.entitlement.activated", "payment.confirmed"],
+            },
         },
     },
 )
+
+print(manifest["pricing_recommendation"]["recommended_plan"])  # starter, growth, or scale
+print(setup["owner_approval_url"])  # send the owner here for the one-minute approval step
 ```
 
 ### Merchant workspace product
