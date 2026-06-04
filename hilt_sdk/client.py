@@ -284,6 +284,34 @@ class AccessResource(_ResourceBase):
     ) -> JSONDict:
         return self._client.request(f"/v1/access/products/{product_id}/available-rails", query=query)
 
+    def get_native_subscription(self, authorization_id: str) -> JSONDict:
+        return self._client.request(f"/v1/access/native-subscriptions/{authorization_id}")
+
+    def create_native_subscription_cancel_intent(
+        self,
+        authorization_id: str,
+        body: Optional[Mapping[str, Any]] = None,
+    ) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/native-subscriptions/{authorization_id}/cancel-intent",
+            method="POST",
+            body=body or {},
+        )
+
+    def confirm_native_subscription_cancel(
+        self,
+        authorization_id: str,
+        body: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+    ) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/native-subscriptions/{authorization_id}/cancel-confirm",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
     def create_app(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
         return self._client.request(
             "/v1/access/apps",
@@ -394,7 +422,7 @@ class HiltClient:
         bearer_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 20.0,
-        user_agent: str = "hilt-python-sdk/1.0.2",
+        user_agent: str = "hilt-python-sdk/1.0.3",
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key.strip() if api_key else None

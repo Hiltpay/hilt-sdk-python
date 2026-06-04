@@ -4,6 +4,12 @@ Official Python SDK for Hilt Pay Workspace and Hilt Pay API.
 
 Source: `https://github.com/Hiltpay/hilt-sdk-python`
 
+Agent discovery contract:
+
+- Agent manifest: `https://www.hilt.so/.well-known/hilt-agent.json`
+- Agent Discovery Standard: `https://docs.hilt.so/developers/agent-discovery-standard`
+- OpenAPI: `https://api.hilt.so/v1/openapi.json`
+
 This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 
 - products
@@ -14,6 +20,7 @@ This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 - support
 - webhooks
 - Hilt Pay API apps, products, entitlements, setup manifests, and agent bootstrap
+- native subscription state and cancellation helpers
 
 ## Install
 
@@ -55,6 +62,10 @@ manifest = public_client.pay_api.submit_agent_setup_manifest(
                 "title": "Pro API access",
                 "amount_minor_units": 79000000,
                 "default_rail": "solana_usdc",
+                "billing_model": "recurring",
+                "renewal_mode": "solana_native_subscription",
+                "billing_interval_days": 30,
+                "cancel_at_period_end": True,
                 "expected_monthly_payments": 120,
                 "expected_monthly_volume_usd": 9480,
             },
@@ -87,7 +98,7 @@ client = HiltClient(api_key="hk_live_...")
 product = client.products.create(
     {
         "product_type": "PAYMENT_LINK",
-        "title": "Members lounge",
+        "title": "30-day members lounge",
         "amount_minor_units": 200000,
         "token_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         "merchant_wallet": "So1anaMerchantWallet1111111111111111111111111",
@@ -98,7 +109,7 @@ product = client.products.create(
             "platform": "CUSTOM",
             "identity_type": "WALLET",
             "identity_required": False,
-            "renewal_mode": "MANUAL",
+            "renewal_mode": "ONE_OFF",
             "billing_interval_days": 30,
             "grace_period_days": 3,
         },
@@ -108,13 +119,39 @@ product = client.products.create(
 print(product["id"], product["slug"])
 ```
 
+### Native subscription state and cancellation
+
+```python
+subscription = client.pay_api.get_native_subscription("AUTHORIZATION_ID")
+
+cancel_intent = client.pay_api.create_native_subscription_cancel_intent(
+    "AUTHORIZATION_ID",
+    {
+        "reason": "buyer_requested",
+        "cancel_at_period_end": True,
+    },
+)
+
+cancelled = client.pay_api.confirm_native_subscription_cancel(
+    "AUTHORIZATION_ID",
+    {
+        "cancel_tx_signature": "SOLANA_CANCEL_TRANSACTION_SIGNATURE",
+        "reason": "buyer_requested",
+        "immediate_revoke": False,
+    },
+    idempotency_key="native-cancel-AUTHORIZATION_ID-001",
+)
+
+print(subscription["status"], cancel_intent["status"], cancelled["status"])
+```
+
 ## Quick start
 
-1. Launch one real product in the Hilt app first.
-2. Create an API key for backend automation.
-3. Use the SDK to read or create the same product from your own system.
-4. Switch longer-running automation to Hilt webhooks.
-5. Use one tiny live payment before real traffic.
+1. Create or approve a Hilt Pay API setup intent.
+2. Use the SDK to create an app, product, payment session, and webhook.
+3. Use sandbox sessions to validate object handling without live money.
+4. Use entitlement checks before serving paid work.
+5. For recurring access, create products with `billing_model: "recurring"` and `renewal_mode: "solana_native_subscription"`.
 
 ## Auth surfaces
 

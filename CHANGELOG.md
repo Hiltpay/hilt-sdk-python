@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.0.3
 
 - Update Hilt Pay API agent bootstrap examples with owner approval and plan recommendation fields
+- Add native subscription read and cancellation helpers for Hilt Pay API
+- Update recurring examples for Solana USDC native automatic renewals
 
 ## 1.0.2
 
