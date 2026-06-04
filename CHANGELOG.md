@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Add structured `HiltError` and `HiltApiError` models with request ids, retryability, docs URLs, and safe response details
+- Add typed webhook signature verification and router helpers
+- Add request-level idempotency-key support and SDK sandbox payment-session helpers
+- Add recurring-access and framework examples for Hilt Pay API integrations
+- Document current native subscription helper boundaries and future backend contracts without faking unavailable routes
+
 ## 1.0.3
 
 - Update Hilt Pay API agent bootstrap examples with owner approval and plan recommendation fields

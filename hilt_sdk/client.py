@@ -6,21 +6,9 @@ from urllib.parse import urlencode
 
 import requests
 
+from .errors import HILT_ERROR_CODES, HiltApiError, HiltError
+
 JSONDict = Dict[str, Any]
-
-
-class HiltApiError(Exception):
-    def __init__(
-        self,
-        status_code: int,
-        message: str,
-        error_code: Optional[str] = None,
-        details: Any = None,
-    ) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-        self.error_code = error_code
-        self.details = details
 
 
 def _normalize_base_url(value: Optional[str]) -> str:
@@ -43,6 +31,67 @@ def _append_query(path: str, query: Optional[Mapping[str, Any]]) -> str:
     if not items:
         return path
     return f"{path}?{urlencode(items)}"
+
+
+SAFE_RESPONSE_HEADERS = {
+    "content-type",
+    "retry-after",
+    "x-request-id",
+    "x-hilt-request-id",
+    "x-ratelimit-limit",
+    "x-ratelimit-remaining",
+    "x-ratelimit-reset",
+}
+
+
+def _safe_response_headers(response: requests.Response) -> dict[str, str]:
+    return {
+        key.lower(): value
+        for key, value in response.headers.items()
+        if key.lower() in SAFE_RESPONSE_HEADERS
+    }
+
+
+def _request_id_from_response(response: requests.Response) -> Optional[str]:
+    return (
+        response.headers.get("X-Hilt-Request-Id")
+        or response.headers.get("X-Request-Id")
+        or response.headers.get("Request-Id")
+    )
+
+
+def _docs_url_for_code(code: Optional[str]) -> Optional[str]:
+    if not code:
+        return None
+    return f"https://docs.hilt.so/developers/errors#{code.replace('_', '-')}"
+
+
+def _dict_value(value: Any) -> Optional[dict[str, Any]]:
+    return value if isinstance(value, dict) else None
+
+
+def _string_field(data: Optional[Mapping[str, Any]], *keys: str) -> Optional[str]:
+    if not data:
+        return None
+    for key in keys:
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _retryable_from(status_code: int, code: Optional[str], payload: Any) -> bool:
+    if isinstance(payload, dict) and isinstance(payload.get("retryable"), bool):
+        return bool(payload["retryable"])
+    if code == HILT_ERROR_CODES["idempotency_conflict"]:
+        return False
+    if code in {
+        HILT_ERROR_CODES["rate_limited"],
+        HILT_ERROR_CODES["idempotency_in_progress"],
+        HILT_ERROR_CODES["idempotency_race"],
+    }:
+        return True
+    return status_code in {408, 409, 425, 429} or status_code >= 500
 
 
 @dataclass(frozen=True)
@@ -215,8 +264,27 @@ class AccessResource(_ResourceBase):
     @staticmethod
     def _idempotency_headers(idempotency_key: str) -> dict[str, str]:
         normalized = str(idempotency_key or "").strip()
-        if not normalized:
-            raise ValueError("Hilt Pay API write calls require an idempotency key.")
+        if len(normalized) < 8:
+            raise HiltError(
+                "Write requests require an Idempotency-Key header of at least 8 characters.",
+                code=HILT_ERROR_CODES["idempotency_key_required"],
+                status_code=400,
+                docs_url=_docs_url_for_code(HILT_ERROR_CODES["idempotency_key_required"]),
+            )
+        if len(normalized) > 255:
+            raise HiltError(
+                "Idempotency-Key must be 255 characters or fewer.",
+                code=HILT_ERROR_CODES["idempotency_key_too_long"],
+                status_code=400,
+                docs_url=_docs_url_for_code(HILT_ERROR_CODES["idempotency_key_too_long"]),
+            )
+        if any(ord(char) < 33 or ord(char) == 127 or ord(char) > 126 for char in normalized):
+            raise HiltError(
+                "Idempotency-Key must be visible ASCII without whitespace.",
+                code=HILT_ERROR_CODES["idempotency_key_invalid"],
+                status_code=400,
+                docs_url=_docs_url_for_code(HILT_ERROR_CODES["idempotency_key_invalid"]),
+            )
         return {"Idempotency-Key": normalized}
 
     def list_rails(self) -> JSONDict:
@@ -331,6 +399,28 @@ class AccessResource(_ResourceBase):
     def create_payment_session(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
         return self._client.request(
             "/v1/access/payment-sessions",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def create_sandbox_payment_session(self, body: Mapping[str, Any], *, idempotency_key: str) -> JSONDict:
+        return self._client.request(
+            "/v1/access/sandbox/payment-sessions",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def confirm_sandbox_payment_session(
+        self,
+        sandbox_session_id: str,
+        body: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+    ) -> JSONDict:
+        return self._client.request(
+            f"/v1/access/sandbox/payment-sessions/{sandbox_session_id}/confirm",
             method="POST",
             body=body,
             headers=self._idempotency_headers(idempotency_key),
@@ -452,11 +542,14 @@ class HiltClient:
         body: Optional[Mapping[str, Any]] = None,
         response_type: str = "json",
         headers: Optional[Mapping[str, str]] = None,
+        idempotency_key: Optional[str] = None,
     ) -> Any:
         url = f"{self.base_url}{_append_query(path, query)}"
         request_headers = {"Accept": "application/json", "User-Agent": self.user_agent}
         if headers:
             request_headers.update(headers)
+        if idempotency_key:
+            request_headers["Idempotency-Key"] = idempotency_key.strip()
 
         auth_header = self._resolve_auth_header(auth)
         if auth_header:
@@ -465,13 +558,21 @@ class HiltClient:
         if body is not None:
             request_headers["Content-Type"] = "application/json"
 
-        response = self.session.request(
-            method=method,
-            url=url,
-            json=body,
-            headers=request_headers,
-            timeout=self.timeout,
-        )
+        try:
+            response = self.session.request(
+                method=method,
+                url=url,
+                json=body,
+                headers=request_headers,
+                timeout=self.timeout,
+            )
+        except requests.Timeout as exc:
+            raise HiltError(
+                f"Hilt request timed out after {self.timeout}s.",
+                code="request_timeout",
+                retryable=True,
+                docs_url="https://docs.hilt.so/developers/errors",
+            ) from exc
 
         if not response.ok:
             raise self._build_error(response)
@@ -506,6 +607,7 @@ class HiltClient:
         payload: Any = None
         message = f"HTTP {response.status_code}"
         error_code: Optional[str] = None
+        docs_url: Optional[str] = None
 
         try:
             payload = response.json()
@@ -515,16 +617,33 @@ class HiltClient:
         if isinstance(payload, str) and payload:
             message = payload
         elif isinstance(payload, dict):
-            detail = payload.get("detail") or payload.get("message")
+            detail_payload = _dict_value(payload.get("detail"))
+            detail = (
+                _string_field(detail_payload, "message", "detail")
+                or payload.get("detail")
+                or payload.get("message")
+                or payload.get("error_description")
+            )
             if isinstance(detail, str) and detail.strip():
                 message = detail
-            code = payload.get("error") or payload.get("code")
-            if isinstance(code, str) and code.strip():
-                error_code = code
+            error_code = _string_field(detail_payload, "code", "error") or _string_field(payload, "code", "error")
+            docs_url = (
+                _string_field(detail_payload, "docs_url", "docsUrl")
+                or _string_field(payload, "docs_url", "docsUrl")
+                or _docs_url_for_code(error_code)
+            )
 
         return HiltApiError(
             status_code=response.status_code,
             message=message,
             error_code=error_code,
             details=payload,
+            request_id=_request_id_from_response(response),
+            retryable=_retryable_from(response.status_code, error_code, payload),
+            docs_url=docs_url,
+            raw_response={
+                "status_code": response.status_code,
+                "headers": _safe_response_headers(response),
+                "body": payload,
+            },
         )
