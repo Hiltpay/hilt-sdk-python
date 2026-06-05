@@ -88,6 +88,43 @@ print(manifest["pricing_recommendation"]["recommended_plan"])  # starter, growth
 print(setup["owner_approval_url"])  # send the owner here for the one-minute approval step
 ```
 
+### Check access before serving a resource
+
+Use this in every API route, middleware, worker, or tool call that needs to know whether a customer has access right now.
+
+```python
+import os
+
+from fastapi import FastAPI, Header, HTTPException
+from hilt_sdk import HiltClient
+
+app = FastAPI()
+client = HiltClient(api_key=os.environ["HILT_API_KEY"])
+
+
+@app.post("/ai/pro")
+async def pro_ai(x_customer_id: str = Header(...)):
+    access = client.pay_api.check_entitlement(
+        {
+            "external_product_id": "pro-api",
+            "external_customer_id": x_customer_id,
+        }
+    )
+
+    if not access["has_access"]:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "payment_required",
+                "status": access["status"],
+                "reason": access["reason"],
+                "external_product_id": access["external_product_id"],
+            },
+        )
+
+    return {"ok": True}
+```
+
 ### Merchant workspace product
 
 ```python
