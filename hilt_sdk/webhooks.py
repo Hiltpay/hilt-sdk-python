@@ -147,4 +147,3 @@ class HiltWebhookRouter:
 
 def create_webhook_router() -> HiltWebhookRouter:
     return HiltWebhookRouter()
-

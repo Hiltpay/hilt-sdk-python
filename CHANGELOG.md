@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Add x402 V2 settlement and atomic metered-entitlement methods
+- Add x402 V2 header encoding, decoding, and payment-signature helpers
+- Add product usage grants and entitlement usage examples
+
 ## 1.1.0
 
 - Add structured `HiltError` and `HiltApiError` models with request ids, retryability, docs URLs, and safe response details

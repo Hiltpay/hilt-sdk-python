@@ -441,6 +441,32 @@ class AccessResource(_ResourceBase):
             body=body,
         )
 
+    def consume_entitlement(
+        self,
+        body: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+    ) -> JSONDict:
+        return self._client.request(
+            "/v1/access/entitlements/consume",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
+    def settle_x402(
+        self,
+        body: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+    ) -> JSONDict:
+        return self._client.request(
+            "/v1/access/x402/settle",
+            method="POST",
+            body=body,
+            headers=self._idempotency_headers(idempotency_key),
+        )
+
     def get_entitlement(self, entitlement_id: str) -> JSONDict:
         return self._client.request(f"/v1/access/entitlements/{entitlement_id}")
 
@@ -512,7 +538,7 @@ class HiltClient:
         bearer_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 20.0,
-        user_agent: str = "hilt-python-sdk/1.0.3",
+        user_agent: str = "hilt-python-sdk/1.2.0",
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key.strip() if api_key else None

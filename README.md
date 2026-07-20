@@ -9,6 +9,8 @@ Agent discovery contract:
 - Agent manifest: `https://www.hilt.so/.well-known/hilt-agent.json`
 - Agent Discovery Standard: `https://docs.hilt.so/developers/agent-discovery-standard`
 - OpenAPI: `https://api.hilt.so/v1/openapi.json`
+- Grok Build guide: `https://docs.hilt.so/developers/grok-build`
+- Runnable Next.js example: `https://github.com/Hiltpay/hilt-developer-assets/tree/main/examples/grok-build-nextjs`
 
 This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 
@@ -21,6 +23,7 @@ This SDK wraps the same public merchant routes documented on `docs.hilt.so`:
 - webhooks
 - Hilt Pay API apps, products, entitlements, setup manifests, and agent bootstrap
 - native subscription state and cancellation helpers
+- x402 V2 settlement and atomic metered-entitlement consumption
 
 ## Install
 
@@ -31,6 +34,28 @@ pip install hilt-sdk
 Source and release history: `https://github.com/Hiltpay/hilt-sdk-python`
 
 ## Example
+
+### Metered agent requests
+
+```python
+usage = client.pay_api.consume_entitlement(
+    {
+        "external_product_id": "research-calls",
+        "external_customer_id": "agent_42",
+        "units": 1,
+        "metadata": {"request_id": "req_01J..."},
+    },
+    idempotency_key="req_01J...",
+)
+
+if not usage["consumed"]:
+    raise RuntimeError("Usage was not consumed")
+```
+
+Use `create_payment_signature` when your wallet integration already returns a signed Solana transaction as base64. The protected-resource server then calls `settle_x402` with its server-side Hilt API key.
+
+Guide: `https://docs.hilt.so/developers/agent-micropayments`
+Complete TypeScript transaction example: `https://github.com/Hiltpay/hilt-developer-assets/tree/main/examples/agent-micropayments`
 
 ### Agent-first Hilt Pay API bootstrap
 
