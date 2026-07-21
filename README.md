@@ -7,7 +7,7 @@ Source: `https://github.com/Hiltpay/hilt-sdk-python`
 Agent discovery contract:
 
 - Agent manifest: `https://www.hilt.so/.well-known/hilt-agent.json`
-- Agent Discovery Standard: `https://docs.hilt.so/developers/agent-discovery-standard`
+- Agent Discovery Standard: `https://www.hilt.so/agent-discovery-standard`
 - OpenAPI: `https://api.hilt.so/v1/openapi.json`
 - Grok Build guide: `https://docs.hilt.so/developers/grok-build`
 - Runnable Next.js example: `https://github.com/Hiltpay/hilt-developer-assets/tree/main/examples/grok-build-nextjs`
