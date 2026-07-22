@@ -113,9 +113,9 @@ print(manifest["pricing_recommendation"]["recommended_plan"])  # starter, growth
 print(setup["owner_approval_url"])  # send the owner here for the one-minute approval step
 ```
 
-### Check access before serving a resource
+### Check durable or time-based access
 
-Use this in every API route, middleware, worker, or tool call that needs to know whether a customer has access right now.
+Use this for subscriptions, memberships, and other durable access where the question is whether a customer has access right now. For each billable metered request, use atomic `consume_entitlement` instead.
 
 ```python
 import os
