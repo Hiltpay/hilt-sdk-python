@@ -478,15 +478,6 @@ class AccessResource(_ResourceBase):
             headers=self._idempotency_headers(idempotency_key),
         )
 
-    def create_stripe_billing_checkout(self, body: Mapping[str, Any]) -> JSONDict:
-        return self._client.request(
-            "/v1/access/billing/checkout/stripe",
-            method="POST",
-            body=body,
-            auth="bearer",
-        )
-
-
 class WebhooksResource(_ResourceBase):
     def list_endpoints(self) -> JSONDict:
         return self._client.request("/v1/webhooks/endpoints", auth="bearer")
@@ -538,7 +529,7 @@ class HiltClient:
         bearer_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 20.0,
-        user_agent: str = "hilt-python-sdk/1.2.0",
+        user_agent: str = "hilt-python-sdk/1.3.0",
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key.strip() if api_key else None
