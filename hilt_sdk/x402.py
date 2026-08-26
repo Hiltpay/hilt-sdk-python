@@ -31,6 +31,17 @@ def decode_x402_header(value: str) -> dict[str, Any]:
     return payload
 
 
+def get_hilt_payment_session_id(payment_signature: str) -> str:
+    payload = decode_x402_header(payment_signature)
+    accepted = payload.get("accepted")
+    extra = accepted.get("extra") if isinstance(accepted, dict) else None
+    hilt = extra.get("hilt") if isinstance(extra, dict) else None
+    payment_session_id = hilt.get("paymentSessionId") if isinstance(hilt, dict) else None
+    if not isinstance(payment_session_id, str) or not payment_session_id.strip():
+        raise ValueError("PAYMENT-SIGNATURE is not bound to a Hilt payment session")
+    return payment_session_id.strip()
+
+
 def _positive_amount(value: Any, field: str) -> int:
     text = str(value or "")
     if not text.isdigit() or text.startswith("0"):

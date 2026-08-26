@@ -38,23 +38,30 @@ Source and release history: `https://github.com/Hiltpay/hilt-sdk-python`
 ### Metered agent requests
 
 ```python
-usage = client.pay_api.consume_entitlement(
-    {
-        "external_product_id": "research-calls",
-        "external_customer_id": "agent_42",
-        "units": 1,
-        "metadata": {"request_id": "req_01J..."},
-    },
-    idempotency_key="req_01J...",
+import os
+
+from hilt_sdk import HiltClient, protect_request
+
+client = HiltClient(api_key=os.environ["HILT_API_KEY"])
+
+decision = protect_request(
+    client=client,
+    external_product_id="research-calls",
+    customer_id="agent_42",
+    request_id="req_01J4W8RQ6M",
+    resource_url="https://api.example.com/research",
+    payment_signature=request.headers.get("PAYMENT-SIGNATURE"),
 )
 
-if not usage["consumed"]:
-    raise RuntimeError("Usage was not consumed")
+if not decision.allowed:
+    return JSONResponse(decision.body, status_code=decision.status_code, headers=decision.headers)
+
+return run_paid_research()
 ```
 
-Use `create_payment_signature` when your wallet integration already returns a signed Solana transaction as base64. The protected-resource server then calls `settle_x402` with its server-side Hilt API key.
+`protect_request` returns an allow-or-challenge decision and never authorizes billable work before atomic usage consumption. One payment can grant many units. Use `create_payment_signature` when the buyer wallet integration already returns a signed Solana transaction as base64.
 
-Guide: `https://docs.hilt.so/developers/agent-micropayments`
+Guide: `https://docs.hilt.so/developers/protect-an-endpoint`
 Complete TypeScript transaction example: `https://github.com/Hiltpay/hilt-developer-assets/tree/main/examples/agent-micropayments`
 
 ### Agent-first Hilt Pay API bootstrap

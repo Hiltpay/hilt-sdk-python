@@ -529,7 +529,7 @@ class HiltClient:
         bearer_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 20.0,
-        user_agent: str = "hilt-python-sdk/1.3.0",
+        user_agent: str = "hilt-python-sdk/1.4.0",
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key.strip() if api_key else None
